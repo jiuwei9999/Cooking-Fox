@@ -1,6 +1,7 @@
 import { api } from "../services/api.js";
 import { fmtAction, pct, round1 } from "../shared/format.js";
 import { el, mount } from "../shared/dom.js";
+import { initPot3D, updatePot3D } from "../3d/potScene.js";
 
 let state = {
   session: null,
@@ -49,7 +50,7 @@ export async function renderKitchen(root) {
     header,
     el("div", { class: "potView" }, [
       el("div", { class: "pot" }, [
-        el("div", { class: "potBubble" }, []),
+        el("div", { id: "pot3dHost", style: "width:100%;height:100%;" }, []),
         el("div", { class: "potTop" }, [
           el("span", { class: "pill", id: "potSummary" }, ["还没有开始"]),
           el("span", { class: "pill", id: "tempPill" }, ["25°C"]),
@@ -74,6 +75,7 @@ export async function renderKitchen(root) {
           el("button", { class: "btn", onclick: () => doTaste() }, ["尝味"]),
           el("button", { class: "btn btnDanger", onclick: () => doServe() }, ["出锅报告"]),
         ]),
+        el("div", { id: "tasteFace", class: "pill" }, ["🙂 还没尝过，先尝一口再说。"]),
         el("div", { class: "hr" }),
         el("div", { class: "timeline", id: "timeline" }, []),
       ]),
@@ -83,6 +85,10 @@ export async function renderKitchen(root) {
   mount(root, el("div", { class: "app" }, [left, center, right]));
 
   await ensureSession();
+  const potHost = document.getElementById("pot3dHost");
+  if (potHost) {
+    initPot3D(potHost);
+  }
   rerenderAll();
 }
 
@@ -313,8 +319,18 @@ function rerenderAll() {
     }
 
     ingredients.forEach((ing) => {
+      const thumb =
+        ing.image_url &&
+        el("img", {
+          src: ing.image_url,
+          alt: ing.name,
+          style: "width:32px;height:32px;border-radius:999px;object-fit:cover;margin-right:8px;border:1px solid rgba(255,255,255,0.12);",
+        });
       const row = el("div", { class: "ingredientItem" }, [
-        el("div", {}, [el("strong", {}, [ing.name]), el("div", {}, [el("small", {}, [ing.id])])]),
+        el("div", { class: "row" }, [
+          thumb,
+          el("div", {}, [el("strong", {}, [ing.name]), el("div", {}, [el("small", {}, [ing.id])])]),
+        ].filter(Boolean)),
         el("button", { class: "btn", onclick: () => doQuickAdd(ing.id) }, ["+10g"]),
       ]);
       ingList.appendChild(row);
@@ -349,8 +365,16 @@ function rerenderAll() {
     const count = (state.session.pot || []).length;
     potSummary.textContent = count ? `锅里：${count}份食材` : "锅里空空的";
   }
+  updatePot3D(state.session);
   const tempPill = document.getElementById("tempPill");
-  if (tempPill) tempPill.textContent = `${round1(state.session.metrics.temp_c)}°C`;
+  if (tempPill) {
+    const t = state.session.metrics.temp_c || 25;
+    tempPill.textContent = `${round1(t)}°C`;
+    tempPill.classList.remove("tempPillCool", "tempPillWarm", "tempPillHot");
+    if (t < 60) tempPill.classList.add("tempPillCool");
+    else if (t < 120) tempPill.classList.add("tempPillWarm");
+    else tempPill.classList.add("tempPillHot");
+  }
 
   const metricsEl = document.getElementById("metrics");
   if (metricsEl) {
@@ -361,6 +385,11 @@ function rerenderAll() {
   const suggEl = document.getElementById("suggestion");
   if (suggEl) {
     suggEl.textContent = buildSuggestion(state.session);
+  }
+
+  const faceEl = document.getElementById("tasteFace");
+  if (faceEl) {
+    faceEl.textContent = buildTasteFace(state.session);
   }
 
   const timeline = document.getElementById("timeline");
@@ -478,41 +507,154 @@ function buildSuggestion(session) {
 
   // 简单规则引擎：根据当前状态给 1 条人话建议。
   if (!steps.length) {
-    return "建议：先从左侧选择一种主食材（如鸡蛋/番茄/大米）加入锅中，再逐步加水/油/调味。";
+    return "🙂 建议：先从左侧选择一种主食材（如鸡蛋/番茄/大米）加入锅中，再逐步加水/油/调味。";
   }
 
   if ((session.pot || []).length === 0) {
-    return "锅里是空的，可以先加一点水或油，再加入食材。";
+    return "🪣 锅里是空的，可以先加一点水或油，再加入食材。";
   }
 
   if (m.temp_c < 40 && last !== "heat") {
-    return "锅温较低，可以先选择合适的加热方式（比如炒/煎/煮）和温度时间，加热一次。";
+    return "🥶 锅温较低，可以先选择合适的加热方式（比如炒/煎/煮）和温度时间，加热一次。";
   }
 
   if (m.burn_risk > 0.7) {
-    return "糊底风险偏高，建议立刻调低温度或短时间加点水/翻炒，避免烧糊。";
+    return "🔥 糊底风险偏高，建议立刻调低温度或短时间加点水/翻炒，避免烧糊。";
   }
 
   if (taste.salty > 0.8) {
-    return "咸度已经很高，后续尽量不要再加盐/生抽，可以适当加水或无盐食材稀释。";
+    return "😖 咸度已经很高，后续尽量不要再加盐/生抽，可以适当加水或无盐食材稀释。";
   }
 
   if (taste.salty < 0.2 && taste.umami > 0.3 && last === "heat") {
-    return "整体偏淡，可以在关火前或出锅前少量多次地补一点盐/生抽，并随时“尝味”。";
+    return "😶 整体偏淡，可以在关火前或出锅前少量多次地补一点盐/生抽，并随时“尝味”。";
   }
 
   if (m.doneness < 0.3 && last === "heat") {
-    return "熟度偏低，可以继续加热一小段时间；注意不要一次把时间拉太长，建议多次少量加热并中间“尝味”。";
+    return "🧊 熟度偏低，可以继续加热一小段时间；注意不要一次把时间拉太长，建议多次少量加热并中间“尝味”。";
   }
 
   if (m.doneness > 0.9 && m.browning < 0.2 && m.burn_risk < 0.4) {
-    return "熟度已经接近完成，如果想要更多焦香，可以短时间中火/大火加热，关注上色变化。";
+    return "😋 熟度已经接近完成，如果想要更多焦香，可以短时间中火/大火加热，关注上色变化。";
   }
 
   if (last === "taste") {
-    return "可以根据刚才的尝味结果，选择微调调味（盐/糖/酸/辣），或直接“出锅报告”看整体评价。";
+    return "👅 可以根据刚才的尝味结果，选择微调调味（盐/糖/酸/辣），或直接“出锅报告”看整体评价。";
   }
 
-  return "状态较平衡，可以根据自己的想法继续加料、调味或“尝味”，也可以直接出锅查看报告。";
+  return "🙂 状态较平衡，可以根据自己的想法继续加料、调味或“尝味”，也可以直接出锅查看报告。";
+}
+
+function renderPotVisual(session) {
+  const m = session.metrics || {};
+  const liquidEl = document.getElementById("potLiquid");
+  const steamEl = document.getElementById("potSteam");
+  const chipsHost = document.getElementById("potChips");
+  if (!liquidEl || !steamEl || !chipsHost) return;
+
+  const water = m.water_g || 0;
+  const oil = m.oil_g || 0;
+  const solids = m.solids_g || 0;
+  const total = water + oil + solids;
+  const level = Math.max(8, Math.min(80, (total / 400) * 80)); // 0–80%
+
+  // 背景颜色：根据水/油比例和上色程度变化
+  const waterRatio = total > 0 ? water / total : 0;
+  const oilRatio = total > 0 ? oil / total : 0;
+  const brown = m.browning || 0;
+  const baseColor =
+    waterRatio >= oilRatio
+      ? `linear-gradient(180deg, rgba(56,189,248,${0.6 + brown * 0.2}), rgba(15,23,42,0.98))`
+      : `linear-gradient(180deg, rgba(250,204,21,${0.7 + brown * 0.2}), rgba(15,23,42,0.98))`;
+
+  liquidEl.style.height = `${level}%`;
+  liquidEl.style.background = baseColor;
+
+  // 蒸汽：温度越高越明显
+  const temp = m.temp_c || 25;
+  const steamOpacity = temp > 80 ? Math.min(1, (temp - 80) / 80) : 0;
+  steamEl.style.opacity = String(steamOpacity);
+
+  // 锅内“食材块”：从 pot 中取前若干项，散落在液面附近
+  chipsHost.innerHTML = "";
+  const pot = session.pot || [];
+  const maxChips = 10;
+  pot.slice(0, maxChips).forEach((p, idx) => {
+    const ing = session.ingredients?.[p.ingredient_id] || {};
+    const name = ing.name || p.ingredient_id || "?";
+    const label = name.slice(0, 2);
+    const bg = chipColorForId(p.ingredient_id);
+    const chip = el("div", {
+      class: "potIngredientChip",
+      style: `${chipStyle(idx, maxChips, level)};background:${bg}`,
+    }, [label]);
+    chipsHost.appendChild(chip);
+  });
+}
+
+function chipStyle(idx, max, level) {
+  const t = max > 1 ? idx / (max - 1) : 0.5;
+  const x = 15 + t * 70; // 15% ~ 85%
+  const yBase = 100 - level;
+  const y = yBase + 8 + (Math.sin(idx * 1.7) * 6); // 稍微起伏一下
+  return `left:${x}%; top:${y}%;`;
+}
+
+function chipColorForId(id) {
+  switch (id) {
+    case "egg":
+      return "linear-gradient(180deg,#fee2b3,#fbbf77)";
+    case "tomato":
+      return "linear-gradient(180deg,#f97373,#b91c1c)";
+    case "rice":
+      return "linear-gradient(180deg,#f9fafb,#e5e7eb)";
+    case "water":
+      return "linear-gradient(180deg,#e0f2fe,#bae6fd)";
+    case "oil":
+      return "linear-gradient(180deg,#facc15,#fbbf24)";
+    case "salt":
+      return "linear-gradient(180deg,#e5e7eb,#cbd5f5)";
+    case "sugar":
+      return "linear-gradient(180deg,#fef9c3,#fee2e2)";
+    case "soy_sauce":
+      return "linear-gradient(180deg,#0f172a,#111827)";
+    case "garlic":
+      return "linear-gradient(180deg,#fef3c7,#fde68a)";
+    case "ginger":
+      return "linear-gradient(180deg,#facc15,#d97706)";
+    case "chili":
+      return "linear-gradient(180deg,#fb7185,#b91c1c)";
+    case "scallion":
+      return "linear-gradient(180deg,#4ade80,#15803d)";
+    case "butter":
+      return "linear-gradient(180deg,#fef08a,#facc15)";
+    default:
+      return "linear-gradient(180deg,#e5e7eb,#cbd5f5)";
+  }
+}
+
+function buildTasteFace(session) {
+  const m = session.metrics || {};
+  const taste = m.taste || {};
+  const burn = m.burn_risk || 0;
+  const anySteps = (session.timeline || []).length > 0;
+
+  if (!anySteps) return "🙂 还没尝过，先做一点再尝。";
+
+  if (burn > 0.7 || taste.bitter > 0.6) {
+    return "😵🔥 有明显糊味，下次可以早点降温或加点水翻动。";
+  }
+  if (taste.salty > 0.85) {
+    return "😖 太咸了，可以加水/无盐食材稀释一点。";
+  }
+  const intensity =
+    taste.salty + taste.sour + taste.sweet + taste.spicy + taste.umami + taste.bitter;
+  if (intensity < 0.4) {
+    return "😐 有点寡淡，可以适当加点盐/酸/辣或再多煮一会儿。";
+  }
+  if (taste.umami > 0.5 && taste.salty >= 0.3 && taste.salty <= 0.7 && taste.bitter < 0.3) {
+    return "😋 味道不错！咸鲜平衡，基本可以端上桌了。";
+  }
+  return "🙂 味道中规中矩，可以根据喜好微调一点咸/甜/酸。";
 }
 

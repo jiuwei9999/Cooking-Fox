@@ -59,6 +59,7 @@ class IngredientBase(BaseModel):
     spice_frac: float = 0.0
     umami_frac: float = 0.0
     smoke_point_c: float | None = None
+    image_url: str | None = None
 
 
 class IngredientPortion(BaseModel):

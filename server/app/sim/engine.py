@@ -70,9 +70,10 @@ def _recompute_metrics(session: SimSession) -> SimMetrics:
     m.taste.spicy = _clamp01((spice / base_liquid) * 20.0)
     m.taste.umami = _clamp01((umami / base_liquid) * 18.0 + (protein / max(1.0, total)) * 0.35)
 
-    # Bitter can increase with high browning + low water.
+    # Bitter can increase with high browning + low water + burn risk.
     dryness = _clamp01(1.0 - (water / max(1.0, total)))
-    m.taste.bitter = _clamp01(m.browning * 0.7 + dryness * 0.4)
+    burn = session.metrics.burn_risk
+    m.taste.bitter = _clamp01(m.browning * 0.6 + dryness * 0.3 + burn * 0.8)
 
     # Aroma: boosted by spice and browning.
     m.taste.aroma = _clamp01((spice / max(1.0, total)) * 2.0 + m.browning * 0.8)
@@ -86,6 +87,8 @@ def _add_notes_for_newbie(session: SimSession, action: SimAction, notes: list[st
             notes.append("提示：你在煎/炒但锅里几乎没有油，容易粘锅或糊底。")
         if action.target_temp_c is not None and action.target_temp_c >= 230 and m.oil_g > 1:
             notes.append("提示：温度较高，注意油烟与糊底风险。")
+        if m.burn_risk > 0.7:
+            notes.append("提示：已经有明显糊锅风险，继续高温会带来明显焦糊味，可以立刻降温或加少量水翻动。")
     if action.type == "add" and action.ingredient_id in {"salt", "soy_sauce"}:
         if m.water_g < 30:
             notes.append("提示：当前含水量不高，咸味会更集中；可以少量多次并随时“尝味”。")
