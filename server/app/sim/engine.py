@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from .ingredients import DEFAULT_INGREDIENTS
 from .models import (
     CutStyle,
@@ -125,8 +127,9 @@ def step_session(session: SimSession, action: SimAction) -> SimSession:
         target = float(action.target_temp_c or 160.0)
         duration = float(action.duration_s or 30.0)
 
-        # Temperature relax toward target.
-        s.metrics.temp_c = (s.metrics.temp_c * 0.6) + (target * 0.4)
+        # Temperature relax toward target; longer durations approach target more.
+        alpha = 1.0 - math.exp(-max(0.0, duration) / 45.0)
+        s.metrics.temp_c = s.metrics.temp_c + (target - s.metrics.temp_c) * _clamp01(alpha)
 
         # Evaporation grows with temp and duration (boil/steam higher).
         temp = s.metrics.temp_c
