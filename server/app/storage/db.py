@@ -44,6 +44,15 @@ class Storage:
             )
             """
         )
+        cur.execute(
+            """
+            create table if not exists user_recipes (
+              id text primary key,
+              json text not null,
+              created_at integer not null
+            )
+            """
+        )
         self.conn.commit()
 
     def _seed_examples(self) -> None:
@@ -112,5 +121,22 @@ class Storage:
     def list_example_recipes(self) -> list[dict[str, Any]]:
         cur = self.conn.cursor()
         rows = cur.execute("select json from example_recipes").fetchall()
+        return [json.loads(r["json"]) for r in rows]
+
+    def save_user_recipe(self, recipe: dict[str, Any]) -> None:
+        rid = recipe.get("id")
+        if not isinstance(rid, str) or not rid:
+            return
+        cur = self.conn.cursor()
+        cur.execute(
+            "insert into user_recipes (id, json, created_at) values (?, ?, strftime('%s','now')) "
+            "on conflict(id) do update set json=excluded.json",
+            (rid, json.dumps(recipe, ensure_ascii=False)),
+        )
+        self.conn.commit()
+
+    def list_user_recipes(self) -> list[dict[str, Any]]:
+        cur = self.conn.cursor()
+        rows = cur.execute("select json from user_recipes order by created_at desc").fetchall()
         return [json.loads(r["json"]) for r in rows]
 

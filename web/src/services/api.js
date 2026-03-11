@@ -23,5 +23,28 @@ export const api = {
     if (!r.ok) throw new Error("examples failed");
     return await r.json();
   },
+  async userRecipes() {
+    const r = await fetch("/api/recipes/user");
+    if (!r.ok) throw new Error("user recipes failed");
+    return await r.json();
+  },
+  async importRecipe(text) {
+    const r = await fetch("/api/recipes/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!r.ok) throw new Error("import failed");
+    return await r.json();
+  },
+  async saveRecipe(recipe) {
+    const r = await fetch("/api/recipes/save", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ recipe }),
+    });
+    if (!r.ok) throw new Error("save failed");
+    return await r.json();
+  },
 };
 
