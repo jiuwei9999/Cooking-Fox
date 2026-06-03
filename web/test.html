@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><title>Module Test</title></head>
+<body style="background:#111;color:#0f0;font-family:monospace;padding:20px">
+<div id="out"></div>
+<script type="module">
+var out = document.getElementById("out");
+function log(msg, cls) { out.innerHTML += "<div style='color:"+(cls||"#0f0")+"'>"+msg+"</div>"; }
+log("=== Module Load Test ===", "#fff");
+var tests = [
+  ["/src/services/api.js", "api.js"],
+  ["/src/shared/dom.js", "dom.js"],
+  ["/src/shared/format.js", "format.js"],
+  ["/src/shared/dishCanvas.js", "dishCanvas.js"],
+  ["/src/shared/radarChart.js", "radarChart.js"],
+  ["/src/shared/aiImage.js", "aiImage.js"],
+  ["/src/shared/flavorProfile.js", "flavorProfile.js"],
+  ["/src/3d/ingredientModels.js", "ingredientModels"],
+  ["/src/3d/prepScene.js", "prepScene.js"],
+  ["/src/3d/potScene.js", "potScene.js"],
+  ["/src/pages/prepKitchen.js", "prepKitchen.js"],
+  ["/src/pages/kitchen.js", "kitchen.js"],
+];
+for (var t of tests) {
+  try {
+    var m = await import(t[0]);
+    log("OK " + t[1]);
+  } catch(e) {
+    log("FAIL " + t[1] + ": " + e.message, "#f44");
+  }
+}
+log("=== Done ===", "#fff");
+</script>
+</body></html>

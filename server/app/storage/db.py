@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ from ..sim.models import SimSession
 @dataclass
 class Storage:
     conn: sqlite3.Connection
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     @staticmethod
     def create(path: str) -> "Storage":
@@ -56,59 +58,31 @@ class Storage:
         self.conn.commit()
 
     def _seed_examples(self) -> None:
-        examples = [
-            {
-                "id": "practice_fried_egg",
-                "title": "煎蛋（练习）",
-                "ingredients": [
-                    {"name": "鸡蛋", "ingredient_id": "egg", "amount_g": 55},
-                    {"name": "食用油", "ingredient_id": "oil", "amount_g": 8},
-                    {"name": "食盐", "ingredient_id": "salt", "amount_g": 0.8},
-                ],
-                "steps": ["热锅下油", "打入鸡蛋，小火定型", "撒盐，出锅"],
-            },
-            {
-                "id": "practice_tomato_egg",
-                "title": "番茄炒蛋（练习）",
-                "ingredients": [
-                    {"name": "鸡蛋", "ingredient_id": "egg", "amount_g": 110},
-                    {"name": "番茄", "ingredient_id": "tomato", "amount_g": 220},
-                    {"name": "食用油", "ingredient_id": "oil", "amount_g": 12},
-                    {"name": "食盐", "ingredient_id": "salt", "amount_g": 1.2},
-                    {"name": "白砂糖", "ingredient_id": "sugar", "amount_g": 3},
-                ],
-                "steps": ["鸡蛋炒散盛出", "下番茄炒出汁", "回锅鸡蛋，调味出锅"],
-            },
-            {
-                "id": "practice_rice",
-                "title": "蒸米饭（练习）",
-                "ingredients": [
-                    {"name": "大米(生)", "ingredient_id": "rice", "amount_g": 150},
-                    {"name": "水", "ingredient_id": "water", "amount_g": 210},
-                ],
-                "steps": ["淘洗", "加水", "加热沸腾后转小火焖熟", "静置回蒸"],
-            },
-        ]
-        cur = self.conn.cursor()
-        for ex in examples:
-            cur.execute(
-                "insert or ignore into example_recipes (id, json) values (?, ?)",
-                (ex["id"], json.dumps(ex, ensure_ascii=False)),
-            )
-        self.conn.commit()
+        from ..recipes.examples_seed import EXAMPLE_RECIPES
+
+        examples = EXAMPLE_RECIPES
+        with self._lock:
+            cur = self.conn.cursor()
+            for ex in examples:
+                cur.execute(
+                    "insert or replace into example_recipes (id, json) values (?, ?)",
+                    (ex["id"], json.dumps(ex, ensure_ascii=False)),
+                )
+            self.conn.commit()
 
     def save_session(self, session: SimSession | dict[str, Any]) -> None:
         data = session if isinstance(session, dict) else session.model_dump()
         sid = data.get("id")
         if not isinstance(sid, str):
             return
-        cur = self.conn.cursor()
-        cur.execute(
-            "insert into sim_sessions (id, json, updated_at) values (?, ?, strftime('%s','now')) "
-            "on conflict(id) do update set json=excluded.json, updated_at=excluded.updated_at",
-            (sid, json.dumps(data, ensure_ascii=False)),
-        )
-        self.conn.commit()
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute(
+                "insert into sim_sessions (id, json, updated_at) values (?, ?, strftime('%s','now')) "
+                "on conflict(id) do update set json=excluded.json, updated_at=excluded.updated_at",
+                (sid, json.dumps(data, ensure_ascii=False)),
+            )
+            self.conn.commit()
 
     def get_session(self, session_id: str) -> SimSession | None:
         cur = self.conn.cursor()
@@ -127,13 +101,14 @@ class Storage:
         rid = recipe.get("id")
         if not isinstance(rid, str) or not rid:
             return
-        cur = self.conn.cursor()
-        cur.execute(
-            "insert into user_recipes (id, json, created_at) values (?, ?, strftime('%s','now')) "
-            "on conflict(id) do update set json=excluded.json",
-            (rid, json.dumps(recipe, ensure_ascii=False)),
-        )
-        self.conn.commit()
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute(
+                "insert into user_recipes (id, json, created_at) values (?, ?, strftime('%s','now')) "
+                "on conflict(id) do update set json=excluded.json",
+                (rid, json.dumps(recipe, ensure_ascii=False)),
+            )
+            self.conn.commit()
 
     def list_user_recipes(self) -> list[dict[str, Any]]:
         cur = self.conn.cursor()

@@ -1,0 +1,50 @@
+/** @type {Record<string, unknown>} */
+export default {
+  invalid: {
+    butterOnly: "Only butter in the pot—no main ingredient. This isn’t a dish yet, just heating a pan.",
+    tooLittle: "Too little food—looks like a test, not a real cook.",
+    saltOnly: "Only salt. Not edible as a dish.",
+    sauceOnly: "More like sauce or stock than a dish. Add vegetables, meat, or starch.",
+    notADish: "No main ingredient—seasonings alone don’t make a meal.",
+    notCooked: "Food in the pot but never heated. Cook before serving.",
+    empty: "Pot is empty—you haven’t started.",
+  },
+  invalidComment: {
+    notCooked: "🥶 Still raw—heat first",
+    sauceOnly: "🫙 Just seasoning—add mains",
+    notADish: "🤷 Not a dish",
+    tooLittle: "🤏 Too little—add more",
+    empty: "🍽️ Pot is empty",
+  },
+  player: {
+    g90: "🌠 Rare success—actually worth eating",
+    g80: "👍 Plating-ready",
+    g70: "😐 Edible, not memorable",
+    g60: "😒 Barely OK—several issues",
+    g50: "😖 Not great—many problems",
+    g40: "🤢 Disaster—redo it",
+    g30: "🚮 Best feature: you can tell what went in",
+    g0: "☠️ Not food—a crime scene. Toss it",
+  },
+  analysisWorst: "Biggest issue: “{dim}” — {note}",
+  analysisMid: "Mostly mediocre. Weakest: “{dim}” — {note}",
+  suggestionsOk: ["Solid all around—keep it up!"],
+  radar: {
+    salty: "Salt", sweet: "Sweet", oily: "Oiliness", heat: "Heat",
+    umami: "Umami", crisp: "Crisp", moist: "Moisture", harmony: "Balance",
+  },
+  suggestPrefix: "To improve:\n",
+  suggestOk: ["Well done—keep this up!", "Balanced—no big weak spots.", "Repeat this approach!"],
+  pairingJoin: "  ",
+  sceneJoin: ", ",
+  invalidSuggest: {
+    notCooked: "Pick a heat method and cook through.",
+    sauceOnly: "Add vegetables, meat, or rice.",
+    notADish: "Add real food before cooking.",
+    default: "Add ingredients to the pot first.",
+  },
+  invalidTouch: {
+    notCooked: "Raw won’t work—heat it.",
+    default: "Not a dish yet—you’ve got this.",
+  },
+};

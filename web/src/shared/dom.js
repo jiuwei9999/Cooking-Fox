@@ -4,6 +4,7 @@ export function el(tag, attrs = {}, children = []) {
     if (k === "class") node.className = v;
     else if (k === "style") node.setAttribute("style", v);
     else if (k.startsWith("on") && typeof v === "function") node[k.toLowerCase()] = v;
+    else if (k === "disabled" || k === "checked" || k === "readonly") node[k] = Boolean(v);
     else node.setAttribute(k, String(v));
   }
   for (const c of children) {

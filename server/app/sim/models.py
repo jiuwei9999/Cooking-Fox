@@ -43,6 +43,8 @@ class SimMetrics(BaseModel):
     doneness: float = 0.0  # 0..1
     burn_risk: float = 0.0  # 0..1
     emulsion: float = 0.0  # 0..1
+    total_weight_g: float = 0.0
+    idle_minutes: float = 0.0
     taste: TasteVector = Field(default_factory=TasteVector)
 
 
@@ -62,15 +64,30 @@ class IngredientBase(BaseModel):
     image_url: str | None = None
 
 
+class PrepFlags(BaseModel):
+    with_skin: bool | None = None
+    with_bone: bool | None = None
+    marinated: bool = False
+    marinate_minutes: int | None = None
+    set_aside: bool = False
+    marinade_ids: list[str] = Field(default_factory=list)
+    marinate_strength: float | None = None
+
+
 class IngredientPortion(BaseModel):
     ingredient_id: str
     amount_g: float
     cut: CutStyle = CutStyle.none
     particle_mm: float = 20.0  # coarse default
+    doneness: float = 0.0  # 0..1 该份食材熟度
+    burn: float = 0.0  # 0..1 该份焦糊程度
+    added_at_temp_c: float | None = None  # 入锅时锅温（°C）
+    prep_state: str | None = None  # whole, sliced, cracked, ...
+    prep_flags: PrepFlags | None = None
 
 
 class SimAction(BaseModel):
-    type: Literal["add", "cut", "mix", "heat", "rest", "taste", "serve"]
+    type: Literal["add", "cut", "mix", "heat", "rest", "taste", "serve", "scoop_out", "return_to_pot", "stash_to_reserve", "clear_pot"]
     at_ms: int | None = None
 
     ingredient_id: str | None = None
@@ -79,11 +96,18 @@ class SimAction(BaseModel):
     cut_style: CutStyle | None = None
     particle_mm: float | None = None
 
+    portion_index: int | None = None
+    portion_indices: list[int] | None = None
+    reserve_index: int | None = None
+
     mix_intensity: float | None = None  # 0..1
     duration_s: float | None = None
 
     heat_method: HeatMethod | None = None
     target_temp_c: float | None = None
+
+    prep_state: str | None = None
+    prep_flags: PrepFlags | None = None
 
 
 class SimEvent(BaseModel):
@@ -98,7 +122,11 @@ class SimSession(BaseModel):
     name: str = "Untitled cook"
     ingredients: dict[str, IngredientBase] = Field(default_factory=dict)
     pot: list[IngredientPortion] = Field(default_factory=list)
+    reserve: list[IngredientPortion] = Field(default_factory=list)
     metrics: SimMetrics = Field(default_factory=SimMetrics)
     timeline: list[SimEvent] = Field(default_factory=list)
     last_tasted: TasteVector | None = None
+    started_at: float = 0.0  # unix timestamp of first action
+    last_action_at: float = 0.0  # unix timestamp of last action
+    equipment_id: str = "wok"  # current cookware
 

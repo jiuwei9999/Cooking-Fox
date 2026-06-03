@@ -1,0 +1,30 @@
+---
+description: 修改 Python 后端后由 Agent 自动重启服务，勿只提示用户手动重启
+alwaysApply: true
+---
+
+# 后端重启由 Agent 执行
+
+本项目后端：`server/` 目录，Uvicorn 端口 **8787**。
+
+## 何时必须重启
+
+- 修改 `server/app/**/*.py`、`server/.env` 等后端配置或代码后
+- 用户需要验证 API、AI、热量计算等新行为时
+- 完成对话中明确涉及后端改动的任务后
+
+`--reload` 有时不会加载 `.env` 或个别改动，**改 `.env 或核心逻辑后应完整重启一次**。
+
+## Agent 应执行的操作（不要只写「请你重启」）
+
+```bash
+lsof -ti:8787 | xargs kill -9 2>/dev/null
+sleep 1
+cd "/Users/mac/Documents/AI帮我打工干活/server" && source .venv/bin/activate && uvicorn app.main:app --reload --port 8787
+```
+
+在后台启动（`required_permissions: ["all"]`），等待 `Uvicorn running` 或 `Application startup complete`，并用 `curl http://127.0.0.1:8787/api/ai/status` 确认返回 200。
+
+## 告知用户时
+
+简短说明「已帮你重启后端」和访问地址即可，默认地址：`http://127.0.0.1:8787`。

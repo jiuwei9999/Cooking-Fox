@@ -1,13 +1,52 @@
 <!doctype html>
 <html lang="zh-CN">
+  <!-- cache v7 -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CookingSim MVP</title>
+    <title>狐闹厨房 · Cooking-Fox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div id="app"></div>
+    <div id="errors" style="position:fixed;bottom:0;left:0;right:0;max-height:30vh;overflow:auto;background:rgba(255,0,0,0.1);color:red;font-family:monospace;font-size:11px;z-index:9999;padding:8px;display:none"></div>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.162.0/examples/jsm/"
+      }
+    }
+    </script>
+    <script>
+    var errEl = document.getElementById("errors");
+    function _escHtml(s) {
+      var d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+    window.onerror = function(msg, url, line, col, err) {
+      errEl.style.display = "block";
+      var div = document.createElement("div");
+      div.textContent = "ERROR: " + msg + " at " + url + ":" + line;
+      errEl.appendChild(div);
+      if (err && err.stack) {
+        var pre = document.createElement("pre");
+        pre.style.fontSize = "9px";
+        pre.textContent = err.stack;
+        errEl.appendChild(pre);
+      }
+    };
+    window.addEventListener("unhandledrejection", function(e) {
+      errEl.style.display = "block";
+      var div = document.createElement("div");
+      div.textContent = "PROMISE: " + e.reason;
+      errEl.appendChild(div);
+    });
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
