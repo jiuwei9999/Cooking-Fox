@@ -441,7 +441,7 @@ export function renderMealPlan(root) {
   });
 
   const sidebar = el("aside", { class: "guideSidebar guideReveal is-visible" }, [
-    el("a", { href: "#/", class: "guideSidebarLogo" }, ["🦊", el("span", {}, ["狐闹厨房"])]),
+    el("a", { href: "#/", class: "guideSidebarLogo" }, [el("img",{src:"HuNaoKitchen_Logo.svg",class:"guideSidebarLogoImg",alt:""}), el("span", {}, ["狐闹厨房"])]),
     buildSitePageNav("meal"),
     el("div", { class: "guideSidebarCta" }, [
       el("a", { href: "#/", class: "btn", style: "width:100%;text-align:center" }, [tp("backGuide")]),

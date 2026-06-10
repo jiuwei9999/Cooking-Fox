@@ -324,7 +324,7 @@ function buildKitchenMockup() {
   const tabs = tr("welcomeMock.kitchen.tabs");
   return el("div", { class: "guideMock guideMockKitchen guideReveal" }, [
     el("div", { class: "guideMockBar" }, [
-      el("span", { class: "guideMockLogo" }, ["🦊 狐闹厨房"]),
+      el("span", { class: "guideMockLogo" }, [el("img",{src:"HuNaoKitchen_Logo.svg",class:"guideMockLogoImg",alt:""}), " 狐闹厨房"]),
       el("span", { class: "guideMockChip" }, [k("wok")]),
       el("span", { class: "guideMockChip guideMockChipAccent" }, [k("prep")]),
       el("span", { class: "guideMockChip" }, [k("lab")]),
@@ -490,7 +490,7 @@ export function renderWelcome(root) {
   root.className = "welcomeRoot";
 
   const sidebar = el("aside", { class: "guideSidebar guideReveal" }, [
-    el("a", { href: "#/", class: "guideSidebarLogo" }, ["🦊", el("span", {}, ["狐闹厨房"])]),
+    el("a", { href: "#/", class: "guideSidebarLogo" }, [el("img",{src:"HuNaoKitchen_Logo.svg",class:"guideSidebarLogoImg",alt:""}), el("span", {}, ["狐闹厨房"])]),
     buildSitePageNav("guide"),
     el("p", { class: "guideSidebarHint" }, [tw("sidebarHint")]),
     el("nav", { class: "guideSidebarNav" }, buildSidebarNav()),

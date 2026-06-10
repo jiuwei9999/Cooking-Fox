@@ -49,7 +49,7 @@ function isCoolingDown() {
 export async function renderKitchen(root) {
   root.innerHTML = "";
   var topBar = el("div", { class: "topBar" }, [
-    el("a", { href: "#/", class: "topBarLogo", style: "text-decoration:none;color:inherit" }, [el("span",{class:"logoIcon"},["🦊"]), "狐闹厨房"]),
+    el("a", { href: "#/", class: "topBarLogo", style: "text-decoration:none;color:inherit" }, [el("img",{src:"HuNaoKitchen_Logo.svg",class:"logoIcon",alt:""}), "狐闹厨房"]),
     el("div", { class: "topBarNav" }, [
       el("a", { href: "#/", class: "btn", style: "text-decoration:none" }, [t("nav.home")]),
       el("select", { class: "input", style: "width:auto;min-width:90px;padding:8px 10px", onchange: function(e){ doSwitchEquipment(e.target.value); } }, [
